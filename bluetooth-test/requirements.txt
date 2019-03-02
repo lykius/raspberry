@@ -1,0 +1,2 @@
+PyBluez==0.22
+pycodestyle==2.4.0
