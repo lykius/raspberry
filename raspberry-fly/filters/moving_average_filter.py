@@ -9,18 +9,20 @@ from utility.exceptions import *
 from pubsub.message import Message
 
 
-def moving_average_filter(input_q, output_q, output_topic_name):
+def moving_average_filter(in_q, out_q, out_topic, logs_topic):
     try:
         buffer_size = 100
-        in_msg = input_q.get()
+        in_msg = in_q.get()
         first_value = in_msg.data
         buffer = deque([first_value for _ in range(buffer_size)], buffer_size)
         while True:
-            in_msg = input_q.get()
+            in_msg = in_q.get()
             new_value = in_msg.data
             buffer.append(new_value)
             filtered_value = sum(buffer) / buffer_size
-            out_msg = Message(output_topic_name, round(filtered_value, 2))
-            output_q.put(out_msg)
+            out_msg = Message(out_topic, round(filtered_value, 2))
+            out_q.put(out_msg)
     except:
-        print_exc_info(__name__)
+        s = format_current_exception(__name__)
+        print(s)
+        out_q.put(Message(logs_topic, s))

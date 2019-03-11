@@ -10,6 +10,7 @@ from time import sleep
 
 from pubsub.pubsub_manager import pubsub_manager
 from pubsub.topic import Topic
+from pubsub.message import Message
 from data.altitude.MPL3115A2_reader import MPL3115A2_reader
 from simulation.file_reader import file_reader
 from filters.moving_average_filter import moving_average_filter
@@ -18,7 +19,8 @@ from calculators.linreg_calculator import linreg_calculator
 from output.console_writer import console_writer
 from output.HD44780_writer import HD44780_writer
 from output.network_writer import network_writer
-from output.log_writer import log_writer
+from output.data_log_writer import data_log_writer
+from output.program_log_writer import program_log_writer
 from output.bluetooth_server import bluetooth_server
 from utility.exceptions import *
 
@@ -27,6 +29,7 @@ RWALT_TOPIC = 'raw-altitude'
 FLTALT_TOPIC = 'filtered-altitude'
 RWVS_TOPIC = 'raw-vertical-speed'
 FLTVS_TOPIC = 'filtered-vertical-speed'
+LOGS_TOPIC = 'logs-topic'
 
 INITIAL_ALT = 50
 ALT_SAMPLING_INTERVAL = 0.01
@@ -35,8 +38,8 @@ VS_DERIVATIVE_NSKIP = 10
 VS_CALC_LINREG = True
 VS_LINREG_BUFFER_SIZE = 300
 
-SEND_OVER_NETWORK = False
-ALT_SERVER_ADDRESS = ('192.168.1.77', 12345)
+SEND_OVER_NETWORK = True
+ALT_SERVER_ADDRESS = ('192.168.1.7', 12345)
 VS_SERVER_ADDRESS = ('192.168.1.77', 56789)
 
 LOG_DATA = False
@@ -44,6 +47,8 @@ RWALT_LOG_FILE = './logs/raw_altitude.txt'
 FLTALT_LOG_FILE = './logs/filtered_altitude.txt'
 RWVS_LOG_FILE = './logs/raw_vspeed.txt'
 FLTVS_LOG_FILE = './logs/filtered_vspeed.txt'
+
+PROGRAM_LOG_FILE = './logs/log.txt'
 
 DEBUG = False
 SIMULATION = False
@@ -53,7 +58,7 @@ RWALT_SIMULATION_FIELD = 1
 
 DISPLAY_WRITER_NSKIP = 20
 
-ENABLE_BLUETOOTH_SERVER = True
+ENABLE_BLUETOOTH_SERVER = False
 BLUETOOTH_NSKIP = 100
 
 processes = []
@@ -81,10 +86,12 @@ if __name__ == '__main__':
         fltalt_topic = Topic(tag='FA')
         rwvs_topic = Topic(tag='RV')
         fltvs_topic = Topic(tag='FV')
+        logs_topic = Topic(tag='LOGS')
 
         if SIMULATION:
             rwalt_reader = mp.Process(target=file_reader,
                                       args=(publishers_queue, RWALT_TOPIC,
+                                            LOGS_TOPIC,
                                             RWALT_SIMULATION_FILE,
                                             RWALT_SIMULATION_SEPARATOR,
                                             RWALT_SIMULATION_FIELD,
@@ -92,30 +99,33 @@ if __name__ == '__main__':
         else:
             rwalt_reader = mp.Process(target=MPL3115A2_reader,
                                       args=(INITIAL_ALT, publishers_queue,
-                                            RWALT_TOPIC,
+                                            RWALT_TOPIC, LOGS_TOPIC,
                                             ALT_SAMPLING_INTERVAL))
         processes.append(rwalt_reader)
 
         alt_filter = mp.Process(target=moving_average_filter,
                                 args=(rwalt_topic.add_subscription(),
-                                      publishers_queue, FLTALT_TOPIC))
+                                      publishers_queue, FLTALT_TOPIC,
+                                      LOGS_TOPIC))
         processes.append(alt_filter)
 
         if VS_CALC_DERIVATIVE:
             vs_calculator = mp.Process(target=derivative_calculator,
                                        args=(fltalt_topic.add_subscription(),
                                              publishers_queue, RWVS_TOPIC,
-                                             VS_DERIVATIVE_NSKIP))
+                                             LOGS_TOPIC, VS_DERIVATIVE_NSKIP))
         elif VS_CALC_LINREG:
             vs_calculator = mp.Process(target=linreg_calculator,
                                        args=(rwalt_topic.add_subscription(),
                                              publishers_queue, RWVS_TOPIC,
+                                             LOGS_TOPIC,
                                              VS_LINREG_BUFFER_SIZE))
         processes.append(vs_calculator)
 
         vs_filter = mp.Process(target=moving_average_filter,
                                args=(rwvs_topic.add_subscription(),
-                                     publishers_queue, FLTVS_TOPIC))
+                                     publishers_queue, FLTVS_TOPIC,
+                                     LOGS_TOPIC))
         processes.append(vs_filter)
 
         alt_display_input = {
@@ -133,6 +143,7 @@ if __name__ == '__main__':
         display_inputs = [alt_display_input, vs_display_input]
         display_writer = mp.Process(target=HD44780_writer,
                                     args=(display_inputs,
+                                          publishers_queue, LOGS_TOPIC,
                                           DISPLAY_WRITER_NSKIP, DEBUG))
         processes.append(display_writer)
 
@@ -143,7 +154,9 @@ if __name__ == '__main__':
             ]
             alt_network_writer = mp.Process(target=network_writer,
                                             args=(ALT_SERVER_ADDRESS,
-                                                  alt_network_inputs))
+                                                  alt_network_inputs,
+                                                  publishers_queue,
+                                                  LOGS_TOPIC))
             processes.append(alt_network_writer)
 
             vs_network_inputs = [
@@ -152,8 +165,20 @@ if __name__ == '__main__':
             ]
             vs_network_writer = mp.Process(target=network_writer,
                                            args=(VS_SERVER_ADDRESS,
-                                                 vs_network_inputs))
+                                                 vs_network_inputs,
+                                                 publishers_queue, LOGS_TOPIC))
             processes.append(vs_network_writer)
+
+        if ENABLE_BLUETOOTH_SERVER:
+            bluetooth_server_inputs = {
+                'altitude': fltalt_topic.add_subscription(),
+                'vspeed': fltvs_topic.add_subscription()
+            }
+            bluetooth_server = mp.Process(target=bluetooth_server,
+                                          args=(bluetooth_server_inputs,
+                                                publishers_queue, LOGS_TOPIC,
+                                                BLUETOOTH_NSKIP))
+            processes.append(bluetooth_server)
 
         if LOG_DATA:
             rwalt_log_input = {
@@ -176,35 +201,36 @@ if __name__ == '__main__':
                 'file': FLTVS_LOG_FILE
             }
 
-            log_writer = mp.Process(target=log_writer,
-                                    args=([rwalt_log_input, fltalt_log_input,
-                                           rwvs_log_input, fltvs_log_input],))
-            processes.append(log_writer)
+            data_log_writer = mp.Process(target=data_log_writer,
+                                         args=([rwalt_log_input,
+                                                fltalt_log_input,
+                                                rwvs_log_input,
+                                                fltvs_log_input],
+                                               publishers_queue, LOGS_TOPIC))
+            processes.append(data_log_writer)
+
+        program_log_writer = mp.Process(target=program_log_writer,
+                                        args=(PROGRAM_LOG_FILE,
+                                              logs_topic.add_subscription(),))
+        processes.append(program_log_writer)
 
         topics[RWALT_TOPIC] = rwalt_topic
         topics[FLTALT_TOPIC] = fltalt_topic
         topics[RWVS_TOPIC] = rwvs_topic
         topics[FLTVS_TOPIC] = fltvs_topic
+        topics[LOGS_TOPIC] = logs_topic
 
         if DEBUG:
             console_writer_inputs = [topics[t].add_subscription()
                                      for t in topics]
             console_writer = mp.Process(target=console_writer,
-                                        args=(console_writer_inputs,))
+                                        args=(console_writer_inputs,
+                                              publishers_queue, LOGS_TOPIC))
             processes.append(console_writer)
 
-        if ENABLE_BLUETOOTH_SERVER:
-            bluetooth_server_inputs = {
-                'altitude': fltalt_topic.add_subscription(),
-                'vspeed': fltvs_topic.add_subscription() 
-            }
-            bluetooth_server = mp.Process(target=bluetooth_server,
-                                          args=(bluetooth_server_inputs,
-                                                BLUETOOTH_NSKIP))
-            processes.append(bluetooth_server)
-
         pubsub_manager = mp.Process(target=pubsub_manager,
-                                    args=(publishers_queue, topics))
+                                    args=(publishers_queue, topics,
+                                          publishers_queue, LOGS_TOPIC))
         processes.append(pubsub_manager)
 
         for p in processes:
@@ -214,4 +240,6 @@ if __name__ == '__main__':
         while True:
             sleep(100)
     except:
-        print_exc_info(__name__)
+        s = format_current_exception(__name__)
+        print(s)
+        publishers_queue.put(Message(LOGS_TOPIC, s))

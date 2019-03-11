@@ -4,9 +4,10 @@ Process that logs input data.
 """
 
 from utility.exceptions import *
+from pubsub.message import Message
 
 
-def log_writer(inputs):
+def data_log_writer(inputs, out_q, logs_topic):
     try:
         for i in inputs:
             with open(i['file'], 'w'): pass
@@ -18,4 +19,6 @@ def log_writer(inputs):
                                                    in_msg.data,
                                                    in_msg.tag))
     except:
-        print_exc_info(__name__)
+        s = format_current_exception(__name__)
+        print(s)
+        out_q.put(Message(logs_topic, s))

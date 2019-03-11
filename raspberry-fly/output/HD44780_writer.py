@@ -5,9 +5,10 @@ Process that writes data on HD44780 LCD display.
 
 from drivers.HD44780 import *
 from utility.exceptions import *
+from pubsub.message import Message
 
 
-def HD44780_writer(inputs, nskip, debug):
+def HD44780_writer(inputs, out_q, logs_topic, nskip, debug):
     try:
         display = HD44780()
         while True:
@@ -24,4 +25,6 @@ def HD44780_writer(inputs, nskip, debug):
                 for i in inputs:
                     i['queue'].get()
     except:
-        print_exc_info(__name__)
+        s = format_current_exception(__name__)
+        print(s)
+        out_q.put(Message(logs_topic, s))

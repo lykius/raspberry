@@ -10,14 +10,13 @@ from pubsub.message import Message
 from utility.exceptions import *
 
 
-
-def pubsub_manager(publishers_q, topics):
+def pubsub_manager(in_q, topics, out_q, logs_topic):
     indexes = {}
     for t in topics:
         indexes[t] = 0
     try:
         while True:
-            in_msg = publishers_q.get()
+            in_msg = in_q.get()
             t, data, timestamp = in_msg.topic, in_msg.data, in_msg.timestamp
             if t in topics:
                 tag = '{0}.{1}'.format(topics[t].tag, indexes[t])
@@ -26,4 +25,6 @@ def pubsub_manager(publishers_q, topics):
                 for q in topics[t].subscriptions:
                     q.put(out_msg)
     except:
-        print_exc_info(__name__)
+        s = format_current_exception(__name__)
+        print(s)
+        out_q.put(Message(logs_topic, s))

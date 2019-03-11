@@ -10,6 +10,7 @@ Data format:
 import bluetooth
 
 from utility.exceptions import *
+from pubsub.message import Message
 
 
 def checksum(s):
@@ -19,7 +20,7 @@ def checksum(s):
     return '{0:02X}'.format(result)
 
 
-def bluetooth_server(inputs, nskip):
+def bluetooth_server(inputs, out_q, logs_topic, nskip):
     try:
         data_types = [
             'pressure',
@@ -74,4 +75,6 @@ def bluetooth_server(inputs, nskip):
                 except bluetooth.BluetoothError:
                     break
     except:
-        print_exc_info(__name__)
+        s = format_current_exception(__name__)
+        print(s)
+        out_q.put(Message(logs_topic, s))

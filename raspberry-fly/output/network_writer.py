@@ -7,11 +7,13 @@ import socket
 import json
 
 from utility.exceptions import *
+from pubsub.message import Message
+
 
 SOCKET_BUFFER_SIZE = 1024
 
 
-def network_writer(address, inputs):
+def network_writer(address, inputs, out_q, logs_topic):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect(address)
@@ -27,4 +29,6 @@ def network_writer(address, inputs):
                     s.send(json_msg.encode())
                     ack = s.recv(SOCKET_BUFFER_SIZE)
     except:
-        print_exc_info(__name__)
+        s = format_current_exception(__name__)
+        print(s)
+        out_q.put(Message(logs_topic, s))
