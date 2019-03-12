@@ -7,7 +7,7 @@ from utility.exceptions import *
 from pubsub.message import Message
 
 
-def data_log_writer(inputs, out_q, logs_topic):
+def data_log_writer(inputs, out_q):
     try:
         for i in inputs:
             with open(i['file'], 'w'): pass
@@ -19,6 +19,4 @@ def data_log_writer(inputs, out_q, logs_topic):
                                                    in_msg.data,
                                                    in_msg.tag))
     except:
-        s = format_current_exception(__name__)
-        print(s)
-        out_q.put(Message(logs_topic, s))
+        handle_process_exception(__name__, out_q)

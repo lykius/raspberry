@@ -9,7 +9,7 @@ from utility.exceptions import *
 from pubsub.message import Message
 
 
-def derivative_calculator(in_q, out_q, out_topic, logs_topic, nskip):
+def derivative_calculator(in_q, out_q, out_topic, nskip):
     try:
         result = 0.0
         in_msg = in_q.get()
@@ -25,6 +25,4 @@ def derivative_calculator(in_q, out_q, out_topic, logs_topic, nskip):
                 in_q.get()
                 out_q.put(out_msg)
     except:
-        s = format_current_exception(__name__)
-        print(s)
-        out_q.put(Message(logs_topic, s))
+        handle_process_exception(__name__, out_q)

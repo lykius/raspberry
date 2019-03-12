@@ -10,7 +10,7 @@ from utility.exceptions import *
 from pubsub.message import Message
 
 
-def MPL3115A2_reader(initial_altitude, out_q, out_topic, logs_topic, interval):
+def MPL3115A2_reader(initial_altitude, out_q, out_topic, interval):
     try:
         sensor = MPL3115A2()
         sensor.set_altitude(initial_altitude)
@@ -20,6 +20,4 @@ def MPL3115A2_reader(initial_altitude, out_q, out_topic, logs_topic, interval):
             out_q.put(msg)
             sleep(interval)
     except:
-        s = format_current_exception(__name__)
-        print(s)
-        out_q.put(Message(logs_topic, s))
+        handle_process_exception(__name__, out_q)

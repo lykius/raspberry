@@ -10,7 +10,7 @@ from pubsub.message import Message
 from utility.exceptions import *
 
 
-def pubsub_manager(in_q, topics, out_q, logs_topic):
+def pubsub_manager(in_q, topics, out_q):
     indexes = {}
     for t in topics:
         indexes[t] = 0
@@ -25,6 +25,4 @@ def pubsub_manager(in_q, topics, out_q, logs_topic):
                 for q in topics[t].subscriptions:
                     q.put(out_msg)
     except:
-        s = format_current_exception(__name__)
-        print(s)
-        out_q.put(Message(logs_topic, s))
+        handle_process_exception(__name__, out_q)

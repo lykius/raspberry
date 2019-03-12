@@ -20,7 +20,7 @@ def checksum(s):
     return '{0:02X}'.format(result)
 
 
-def bluetooth_server(inputs, out_q, logs_topic, nskip):
+def bluetooth_server(inputs, out_q, nskip):
     try:
         data_types = [
             'pressure',
@@ -75,6 +75,4 @@ def bluetooth_server(inputs, out_q, logs_topic, nskip):
                 except bluetooth.BluetoothError:
                     break
     except:
-        s = format_current_exception(__name__)
-        print(s)
-        out_q.put(Message(logs_topic, s))
+        handle_process_exception(__name__, out_q)

@@ -8,7 +8,7 @@ from utility.exceptions import *
 from pubsub.message import Message
 
 
-def HD44780_writer(inputs, out_q, logs_topic, nskip, debug):
+def HD44780_writer(inputs, out_q, nskip, debug):
     try:
         display = HD44780()
         while True:
@@ -25,6 +25,4 @@ def HD44780_writer(inputs, out_q, logs_topic, nskip, debug):
                 for i in inputs:
                     i['queue'].get()
     except:
-        s = format_current_exception(__name__)
-        print(s)
-        out_q.put(Message(logs_topic, s))
+        handle_process_exception(__name__, out_q)

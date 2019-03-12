@@ -7,12 +7,10 @@ from utility.exceptions import *
 from pubsub.message import Message
 
 
-def console_writer(inputs, out_q, logs_topic):
+def console_writer(inputs, out_q):
     try:
         while True:
             for q in inputs:
                 print(q.get())
     except:
-        s = format_current_exception(__name__)
-        print(s)
-        out_q.put(Message(logs_topic, s))
+        handle_process_exception(__name__, out_q)

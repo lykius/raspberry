@@ -9,7 +9,7 @@ from utility.exceptions import *
 from pubsub.message import Message
 
 
-def moving_average_filter(in_q, out_q, out_topic, logs_topic):
+def moving_average_filter(in_q, out_q, out_topic):
     try:
         buffer_size = 100
         in_msg = in_q.get()
@@ -23,6 +23,4 @@ def moving_average_filter(in_q, out_q, out_topic, logs_topic):
             out_msg = Message(out_topic, round(filtered_value, 2))
             out_q.put(out_msg)
     except:
-        s = format_current_exception(__name__)
-        print(s)
-        out_q.put(Message(logs_topic, s))
+        handle_process_exception(__name__, out_q)

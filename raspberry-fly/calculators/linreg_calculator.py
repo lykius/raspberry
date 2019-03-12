@@ -10,7 +10,7 @@ from utility.exceptions import *
 from pubsub.message import Message
 
 
-def linreg_calculator(in_q, out_q, out_topic, logs_topic, buffer_size):
+def linreg_calculator(in_q, out_q, out_topic, buffer_size):
     try:
         X = np.zeros(shape=(buffer_size, 1), dtype=np.double)
         y = np.zeros(shape=(buffer_size, 1), dtype=np.double)
@@ -29,6 +29,4 @@ def linreg_calculator(in_q, out_q, out_topic, logs_topic, buffer_size):
             out_msg = Message(out_topic, round(linregr.coef_[0, 0], 2))
             out_q.put(out_msg)
     except:
-        s = format_current_exception(__name__)
-        print(s)
-        out_q.put(Message(logs_topic, s))
+        handle_process_exception(__name__, out_q)

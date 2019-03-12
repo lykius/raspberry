@@ -1,6 +1,6 @@
 """
 output/program_log_writer.py
-Process that logs messages from other processes.
+Process that logs messages received on the input queue.
 """
 
 import logging
