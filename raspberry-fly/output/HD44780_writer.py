@@ -4,13 +4,21 @@ Process that writes data on HD44780 LCD display.
 """
 
 from drivers.HD44780 import *
-from utility.exceptions import *
 from pubsub.message import Message
+from utility.exceptions import *
+from utility.logger import Logger
 
 
 def HD44780_writer(inputs, out_q, nskip, debug):
+    logger = Logger(out_q)
+
     try:
+        logger.log(__name__ + ' started')
+
         display = HD44780()
+
+        logger.log(__name__ + ' entering main loop')
+
         while True:
             for i in inputs:
                 in_msg = i['queue'].get()
@@ -21,8 +29,9 @@ def HD44780_writer(inputs, out_q, nskip, debug):
                                                    in_msg.data,
                                                    i['unit'])
                 display.print(s, i['line'], AlignMode.LEFT)
+
             for n in range(nskip):
                 for i in inputs:
                     i['queue'].get()
     except:
-        handle_process_exception(__name__, out_q)
+        logger.log(format_current_exception(__name__))

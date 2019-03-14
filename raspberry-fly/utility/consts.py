@@ -18,7 +18,7 @@ VS_LINREG_BUFFER_SIZE = 300
 
 SEND_OVER_NETWORK = True
 ALT_SERVER_ADDRESS = ('192.168.1.7', 12345)
-VS_SERVER_ADDRESS = ('192.168.1.77', 56789)
+VS_SERVER_ADDRESS = ('192.168.1.7', 56789)
 
 LOG_DATA = False
 RWALT_LOG_FILE = './logs/raw_altitude.txt'
@@ -27,6 +27,7 @@ RWVS_LOG_FILE = './logs/raw_vspeed.txt'
 FLTVS_LOG_FILE = './logs/filtered_vspeed.txt'
 
 PROGRAM_LOG_FILE = './logs/log.txt'
+PRINT_PROGRAM_LOGS = True
 
 DEBUG = False
 SIMULATION = False

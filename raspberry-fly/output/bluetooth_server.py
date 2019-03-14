@@ -9,8 +9,9 @@ Data format:
 
 import bluetooth
 
-from utility.exceptions import *
 from pubsub.message import Message
+from utility.exceptions import *
+from utility.logger import Logger
 
 
 def checksum(s):
@@ -21,7 +22,11 @@ def checksum(s):
 
 
 def bluetooth_server(inputs, out_q, nskip):
+    logger = Logger(out_q)
+
     try:
+        logger.log(__name__ + ' started')
+
         data_types = [
             'pressure',
             'altitude',
@@ -47,12 +52,16 @@ def bluetooth_server(inputs, out_q, nskip):
         server_socket.listen(1)
 
         while True:
+            logger.log(__name__ + ' started')
+
             print('waiting bluetooth connection...')
             client_socket, client_address = server_socket.accept()
             print('connected')
             for i in inputs:
                 while not inputs[i].empty():
                     inputs[i].get_nowait()
+
+            logger.log(__name__ + ' entering main loop')
 
             while True:
                 try:
@@ -71,8 +80,7 @@ def bluetooth_server(inputs, out_q, nskip):
                     for n in range(nskip):
                         for i in inputs:
                             inputs[i].get()
-
                 except bluetooth.BluetoothError:
                     break
     except:
-        handle_process_exception(__name__, out_q)
+        logger.log(format_current_exception(__name__))

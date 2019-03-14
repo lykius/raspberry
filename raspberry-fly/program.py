@@ -24,6 +24,8 @@ from output.program_log_writer import program_log_writer
 from output.bluetooth_server import bluetooth_server
 from utility.exceptions import *
 from utility.consts import *
+from utility.logger import Logger
+
 
 processes = []
 
@@ -45,6 +47,9 @@ if __name__ == '__main__':
 
         pubsub_queue = mp.Queue()
         topics = {}
+
+        logger = Logger(pubsub_queue)
+        logger.log("---> RASPBERRY_FLY STARTING...")
 
         logs_queue = pubsub_queue
         logs_topics = LOGS_TOPIC
@@ -195,10 +200,10 @@ if __name__ == '__main__':
         for p in processes:
             p.start()
 
+        logger.log("---> RASPBERRY_FLY STARTED")
+
         signal.signal(signal.SIGINT, sigint_handler)
         while True:
             sleep(100)
     except:
-        s = format_current_exception(__name__)
-        print(s)
-        pubsub_queue.put(Message(LOGS_TOPIC, s))
+        logger.log(format_current_exception(__name__))

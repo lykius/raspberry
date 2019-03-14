@@ -8,13 +8,21 @@ import sys
 
 from pubsub.message import Message
 from utility.exceptions import *
+from utility.logger import Logger
 
 
 def pubsub_manager(in_q, topics, out_q):
-    indexes = {}
-    for t in topics:
-        indexes[t] = 0
+    logger = Logger(out_q)
+
     try:
+        logger.log(__name__ + ' started')
+
+        indexes = {}
+        for t in topics:
+            indexes[t] = 0
+
+        logger.log(__name__ + ' entering main loop')
+
         while True:
             in_msg = in_q.get()
             t, data, timestamp = in_msg.topic, in_msg.data, in_msg.timestamp
@@ -25,4 +33,4 @@ def pubsub_manager(in_q, topics, out_q):
                 for q in topics[t].subscriptions:
                     q.put(out_msg)
     except:
-        handle_process_exception(__name__, out_q)
+        logger.log(format_current_exception(__name__))

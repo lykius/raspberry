@@ -3,14 +3,22 @@ output/log_writer.py
 Process that logs input data.
 """
 
-from utility.exceptions import *
 from pubsub.message import Message
+from utility.exceptions import *
+from utility.logger import Logger
 
 
 def data_log_writer(inputs, out_q):
+    logger = Logger(out_q)
+
     try:
+        logger.log(__name__ + ' started')
+
         for i in inputs:
             with open(i['file'], 'w'): pass
+
+        logger.log(__name__ + ' entering main loop')
+
         while True:
             for i in inputs:
                 in_msg = i['queue'].get()
@@ -19,4 +27,4 @@ def data_log_writer(inputs, out_q):
                                                    in_msg.data,
                                                    in_msg.tag))
     except:
-        handle_process_exception(__name__, out_q)
+        logger.log(format_current_exception(__name__))
